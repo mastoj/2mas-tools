@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Tears down a cmux workspace + git worktree created by dev-workspace.sh
+# Tears down a cmux workspace + git worktree created by cgw.
 #
 # Usage:
-#   dev-workspace-delete.sh <branch> [repo-root]
+#   cgw delete <branch> [repo-root]
 
 set -euo pipefail
 
-BRANCH="${1:?Usage: dev-workspace-delete.sh <branch> [repo-root]}"
+BRANCH="${1:?Usage: cgw delete <branch> [repo-root]}"
 REPO_ROOT="${2:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
 REPO_NAME="$(basename "$REPO_ROOT")"
 

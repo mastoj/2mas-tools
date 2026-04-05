@@ -2,16 +2,16 @@
 # Creates a git worktree + cmux workspace in one shot.
 #
 # Usage:
-#   dev-workspace.sh <branch> [base-branch] [repo-root]
+#   cgw <branch> [base-branch] [repo-root]
 #
 # Examples:
-#   dev-workspace.sh feature/my-thing            # branch off current HEAD
-#   dev-workspace.sh feature/my-thing main        # branch off main
-#   dev-workspace.sh feature/my-thing main ~/code/myrepo
+#   cgw feature/my-thing             # branch off current HEAD
+#   cgw feature/my-thing main        # branch off main
+#   cgw feature/my-thing main ~/code/myrepo
 
 set -euo pipefail
 
-BRANCH="${1:?Usage: dev-workspace.sh <branch> [base-branch] [repo-root]}"
+BRANCH="${1:?Usage: cgw <branch> [base-branch] [repo-root]}"
 BASE_BRANCH="${2:-HEAD}"
 REPO_ROOT="${3:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
 REPO_NAME="$(basename "$REPO_ROOT")"
@@ -57,7 +57,7 @@ sleep 0.5
 cmux rename-workspace --workspace "$WORKSPACE_ID" -- "$WORKSPACE_NAME"
 
 # ── Left pane: open OpenCode ───────────────────────────────────────────────
-cmux send --workspace "$WORKSPACE_ID" "opencode ." 
+cmux send --workspace "$WORKSPACE_ID" "opencode ."
 cmux send-key --workspace "$WORKSPACE_ID" Return
 
 # ── Split right → lazygit ─────────────────────────────────────────────────
@@ -84,6 +84,7 @@ TERMINAL_ID=$(cmux new-surface --workspace "$WORKSPACE_ID" --cwd "$WORKTREE_PATH
 TERMINAL_ID=${TERMINAL_ID#OK }
 TERMINAL_ID=${TERMINAL_ID%% *}
 sleep 0.3
+
 # Run .cgw/init.sh if it exists, for per-workspace setup
 INIT_SCRIPT="$WORKTREE_PATH/.cgw/init.sh"
 echo "Checking for workspace init script at $INIT_SCRIPT..."
@@ -93,12 +94,9 @@ if [[ -f "$INIT_SCRIPT" ]]; then
   cmux send-key --workspace "$WORKSPACE_ID" --surface "$TERMINAL_ID" Return
 fi
 
-# ── Focus the left (editor) pane ─────────────────────────────────────────
-# cmux send-key --workspace "$WORKSPACE_ID" --surface "$WORKSPACE_ID" Return 2>/dev/null || true
-
-# -- select workspace -- "
+# -- select workspace --
 cmux select-workspace --workspace "$WORKSPACE_ID"
 
 echo ""
 echo "✓ Workspace '$WORKSPACE_NAME' open at $WORKTREE_PATH"
-echo "  To tear everything down: dev-workspace-delete.sh $BRANCH $REPO_ROOT"
+echo "  To tear everything down: cgw delete $BRANCH $REPO_ROOT"
