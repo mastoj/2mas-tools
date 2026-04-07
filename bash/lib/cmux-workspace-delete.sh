@@ -36,7 +36,11 @@ read -r -p "Continue? [y/N] " CONFIRM
 [[ "$CONFIRM" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
 
 # ── Close the cmux workspace ──────────────────────────────────────────────
-if command -v cmux &>/dev/null; then
+if ! command -v cmux &>/dev/null; then
+  echo "  (cmux CLI not found — skipping workspace close)"
+elif ! command -v jq &>/dev/null; then
+  echo "  (jq not found — skipping workspace close)"
+else
   WORKSPACE_ID=$(cmux --json list-workspaces 2>/dev/null \
     | jq -r --arg workspace_name "$WORKSPACE_NAME" 'first(.workspaces[]? | select(.title == $workspace_name) | .ref) // empty' \
       2>/dev/null || true)
@@ -47,8 +51,6 @@ if command -v cmux &>/dev/null; then
   else
     echo "  (no open cmux workspace named '$WORKSPACE_NAME' — skipping)"
   fi
-else
-  echo "  (cmux CLI not found — skipping workspace close)"
 fi
 
 # ── Remove the worktree ───────────────────────────────────────────────────
