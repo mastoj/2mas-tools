@@ -16,9 +16,16 @@ BASE_BRANCH="${2:-HEAD}"
 REPO_ROOT="${3:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
 REPO_NAME="$(basename "$REPO_ROOT")"
 
-BRANCH_NAME="${BRANCH##*/}"  # strip leading path, e.g. feature/foo → foo
+branch_to_worktree_dir() {
+  local branch="$1"
+  branch="${branch#refs/heads/}"
+  branch="${branch//\//--}"
+  printf '%s\n' "$branch"
+}
+
+WORKTREE_DIR_NAME="$(branch_to_worktree_dir "$BRANCH")"
 WORKSPACE_NAME="$REPO_NAME - $BRANCH"
-WORKTREE_PATH="${REPO_ROOT}/.worktrees/${BRANCH_NAME}"
+WORKTREE_PATH="${REPO_ROOT}/.worktrees/${WORKTREE_DIR_NAME}"
 
 # ── Sanity checks ─────────────────────────────────────────────────────────
 if ! command -v cmux &>/dev/null; then

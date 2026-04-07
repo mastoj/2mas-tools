@@ -10,9 +10,21 @@ BRANCH="${1:?Usage: cgw delete <branch> [repo-root]}"
 REPO_ROOT="${2:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
 REPO_NAME="$(basename "$REPO_ROOT")"
 
-BRANCH_NAME="${BRANCH##*/}"
+branch_to_worktree_dir() {
+  local branch="$1"
+  branch="${branch#refs/heads/}"
+  branch="${branch//\//--}"
+  printf '%s\n' "$branch"
+}
+
+WORKTREE_DIR_NAME="$(branch_to_worktree_dir "$BRANCH")"
 WORKSPACE_NAME="$REPO_NAME - $BRANCH"
-WORKTREE_PATH="${REPO_ROOT}/.worktrees/${BRANCH_NAME}"
+WORKTREE_PATH="${REPO_ROOT}/.worktrees/${WORKTREE_DIR_NAME}"
+
+if ! git -C "$REPO_ROOT" rev-parse --git-dir &>/dev/null; then
+  echo "Not a git repository: $REPO_ROOT"
+  exit 1
+fi
 
 # ── Confirm ───────────────────────────────────────────────────────────────
 echo "This will:"
@@ -26,19 +38,24 @@ read -r -p "Continue? [y/N] " CONFIRM
 # ── Close the cmux workspace ──────────────────────────────────────────────
 if command -v cmux &>/dev/null; then
   WORKSPACE_ID=$(cmux --json list-workspaces 2>/dev/null \
-    | python3 -c "
-import sys, json
+    | WORKSPACE_NAME="$WORKSPACE_NAME" WORKTREE_PATH="$WORKTREE_PATH" python3 -c '
+import json
+import os
+import sys
+
 payload = json.load(sys.stdin)
+workspace_name = os.environ["WORKSPACE_NAME"]
+worktree_path = os.environ["WORKTREE_PATH"]
 workspaces = payload.get('workspaces', [])
 match = next(
   (
     w for w in workspaces
-    if w.get('title') == '$WORKSPACE_NAME' or w.get('current_directory') == '$WORKTREE_PATH'
+    if w.get("title") == workspace_name or w.get("current_directory") == worktree_path
   ),
   None,
 )
-print(match['ref'] if match else '')
-" 2>/dev/null || true)
+print(match["ref"] if match else "")
+' 2>/dev/null || true)
 
   if [[ -n "$WORKSPACE_ID" ]]; then
     cmux close-workspace --workspace "$WORKSPACE_ID"

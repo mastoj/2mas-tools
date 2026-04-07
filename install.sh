@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create symbolic links for entry scripts in ./bash.
 # Links go in ~/bin without the .sh extension.
@@ -27,9 +27,20 @@ for file in "$DIR"/bash/*; do
   chmod +x "$file"
   # Define target link path
   link_path="$BIN_DIR/${file_name%.sh}"
-  # Remove existing link if it exists
-  if [ -e "$link_path" ] || [ -L "$link_path" ]; then
-    rm "$link_path"
+  # Refuse to clobber files or links not managed by this repo.
+  if [ -L "$link_path" ]; then
+    existing_target=$(readlink "$link_path")
+    if [ "$existing_target" = "$file" ]; then
+      continue
+    fi
+
+    echo "Skipping $link_path: points to $existing_target"
+    continue
+  fi
+
+  if [ -e "$link_path" ]; then
+    echo "Skipping $link_path: file already exists"
+    continue
   fi
   # Create the symbolic link
   ln -s "$file" "$link_path"
