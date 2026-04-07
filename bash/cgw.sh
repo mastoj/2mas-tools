@@ -13,7 +13,7 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 CREATE_SCRIPT="$SCRIPT_DIR/lib/cmux-workspace.sh"
 DELETE_SCRIPT="$SCRIPT_DIR/lib/cmux-workspace-delete.sh"
-LIST_SCRIPT="$SCRIPT_DIR/cgw-workspace-list.sh"
+LIST_SCRIPT="$SCRIPT_DIR/lib/cgw-workspace-list.sh"
 
 print_help() {
   cat <<'EOF'
