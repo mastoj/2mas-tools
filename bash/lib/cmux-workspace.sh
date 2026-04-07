@@ -26,6 +26,62 @@ branch_to_worktree_dir() {
 WORKTREE_DIR_NAME="$(branch_to_worktree_dir "$BRANCH")"
 WORKSPACE_NAME="$REPO_NAME - $BRANCH"
 WORKTREE_PATH="${REPO_ROOT}/.worktrees/${WORKTREE_DIR_NAME}"
+CONFIG_FILE="$WORKTREE_PATH/.cgw/config.json"
+
+DEFAULT_INIT_COMMAND=""
+DEFAULT_GIT_VIEW_COMMAND="lazygit"
+DEFAULT_EDITOR_COMMAND="hx ."
+DEFAULT_AGENT_COMMAND="opencode ."
+
+config_command() {
+  local key="$1"
+  local default_value="$2"
+
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    printf '%s\n' "$default_value"
+    return 0
+  fi
+
+  if ! command -v jq &>/dev/null; then
+    echo "jq is required to read $CONFIG_FILE"
+    exit 1
+  fi
+
+  jq -er --arg key "$key" --arg default_value "$default_value" '
+    if type != "object" then
+      error("config root must be a JSON object")
+    else
+      .commands // {} |
+      if type != "object" then
+        error(".commands must be a JSON object")
+      else
+        .[$key] // $default_value |
+        if type != "string" then
+          error(".commands.\($key) must be a string")
+        else
+          .
+        end
+      end
+    end
+  ' "$CONFIG_FILE"
+}
+
+run_surface_command() {
+  local surface_id="$1"
+  local command="$2"
+  local quoted_command
+  local cmux_args=(--workspace "$WORKSPACE_ID")
+
+  [[ -n "$command" ]] || return 0
+
+  if [[ -n "$surface_id" ]]; then
+    cmux_args+=(--surface "$surface_id")
+  fi
+
+  quoted_command=$(printf '%q' "$command")
+  cmux send "${cmux_args[@]}" "bash -lc $quoted_command"
+  cmux send-key "${cmux_args[@]}" Return
+}
 
 # ── Sanity checks ─────────────────────────────────────────────────────────
 if ! command -v cmux &>/dev/null; then
@@ -57,6 +113,11 @@ fi
 
 echo "Worktree ready."
 
+AGENT_COMMAND="$(config_command agent "$DEFAULT_AGENT_COMMAND")"
+GIT_VIEW_COMMAND="$(config_command gitView "$DEFAULT_GIT_VIEW_COMMAND")"
+EDITOR_COMMAND="$(config_command editor "$DEFAULT_EDITOR_COMMAND")"
+INIT_COMMAND="$(config_command init "$DEFAULT_INIT_COMMAND")"
+
 # ── Create and name the cmux workspace ───────────────────────────────────
 WORKSPACE_ID=$(cmux new-workspace --cwd "$WORKTREE_PATH")
 WORKSPACE_ID=${WORKSPACE_ID#OK }
@@ -64,16 +125,14 @@ sleep 0.5
 cmux rename-workspace --workspace "$WORKSPACE_ID" -- "$WORKSPACE_NAME"
 
 # ── Left pane: open OpenCode ───────────────────────────────────────────────
-cmux send --workspace "$WORKSPACE_ID" "opencode ."
-cmux send-key --workspace "$WORKSPACE_ID" Return
+run_surface_command "" "$AGENT_COMMAND"
 
 # ── Split right → lazygit ─────────────────────────────────────────────────
 RIGHT_ID=$(cmux new-split right --workspace "$WORKSPACE_ID" --cwd "$WORKTREE_PATH")
 RIGHT_ID=${RIGHT_ID#OK }
 RIGHT_ID=${RIGHT_ID%% *}
 sleep 0.3
-cmux send --workspace "$WORKSPACE_ID" --surface "$RIGHT_ID" "lazygit"
-cmux send-key --workspace "$WORKSPACE_ID" --surface "$RIGHT_ID" Return
+run_surface_command "$RIGHT_ID" "$GIT_VIEW_COMMAND"
 
 # ── Split right pane down → spare shell ──────────────────────────────────
 BOTTOM_ID=$(cmux new-split down --workspace "$WORKSPACE_ID" --surface "$RIGHT_ID" --cwd "$WORKTREE_PATH")
@@ -83,8 +142,7 @@ BOTTOM_ID=${BOTTOM_ID%% *}
 # cmux send --workspace "$WORKSPACE_ID" --surface "$BOTTOM_ID" "npm run dev"
 # cmux send-key --workspace "$WORKSPACE_ID" --surface "$BOTTOM_ID" Return
 sleep 0.3
-cmux send --workspace "$WORKSPACE_ID" --surface "$BOTTOM_ID" "hx ."
-cmux send-key --workspace "$WORKSPACE_ID" --surface "$BOTTOM_ID" Return
+run_surface_command "$BOTTOM_ID" "$EDITOR_COMMAND"
 
 # New surface in initial pane
 TERMINAL_ID=$(cmux new-surface --workspace "$WORKSPACE_ID" --cwd "$WORKTREE_PATH")
@@ -92,13 +150,14 @@ TERMINAL_ID=${TERMINAL_ID#OK }
 TERMINAL_ID=${TERMINAL_ID%% *}
 sleep 0.3
 
-# Run .cgw/init.sh if it exists, for per-workspace setup
-INIT_SCRIPT="$WORKTREE_PATH/.cgw/init.sh"
-echo "Checking for workspace init script at $INIT_SCRIPT..."
-if [[ -f "$INIT_SCRIPT" ]]; then
-  echo "Running workspace init script..."
-  cmux send --workspace "$WORKSPACE_ID" --surface "$TERMINAL_ID" "bash -c './.cgw/init.sh'"
-  cmux send-key --workspace "$WORKSPACE_ID" --surface "$TERMINAL_ID" Return
+# Run .cgw/config.json init command if configured
+if [[ -f "$CONFIG_FILE" ]]; then
+  echo "Loaded workspace config from $CONFIG_FILE"
+fi
+
+if [[ -n "$INIT_COMMAND" ]]; then
+  echo "Running workspace init command..."
+  run_surface_command "$TERMINAL_ID" "$INIT_COMMAND"
 fi
 
 # -- select workspace --

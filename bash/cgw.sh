@@ -30,7 +30,9 @@ Commands:
   --help    Show this help menu
 
 Notes:
-  After creating a workspace, cgw runs .cgw/init.sh from the repo root if it exists.
+  cgw reads .cgw/config.json from the repo root when present.
+  Supported commands are init, gitView, editor, and agent.
+  Defaults: init="", gitView="lazygit", editor="hx .", agent="opencode ."
 EOF
 }
 
