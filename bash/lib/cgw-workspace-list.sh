@@ -45,7 +45,7 @@ print_worktree() {
 
   echo "Worktree: $worktree_path"
   echo "Branch:   $branch_name"
-  echo "Delete:   cgw delete $branch_name \"$REPO_ROOT\""
+  echo "Delete:   cgw delete --yes $branch_name \"$REPO_ROOT\""
   echo ""
 }
 

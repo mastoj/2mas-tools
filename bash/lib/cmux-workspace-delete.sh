@@ -2,11 +2,35 @@
 # Tears down a cmux workspace + git worktree created by cgw.
 #
 # Usage:
-#   cgw delete <branch> [repo-root]
+#   cgw delete [--yes|-y] <branch> [repo-root]
 
 set -euo pipefail
 
-BRANCH="${1:?Usage: cgw delete <branch> [repo-root]}"
+ASSUME_YES=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -y|--yes)
+      ASSUME_YES=1
+      shift
+      ;;
+    -h|--help|help)
+      cat <<'EOF'
+Usage:
+  cgw delete [--yes|-y] <branch> [repo-root]
+
+Options:
+  -y, --yes  Skip confirmation prompts and delete the local branch
+EOF
+      exit 0
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+BRANCH="${1:?Usage: cgw delete [--yes|-y] <branch> [repo-root]}"
 REPO_ROOT="${2:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
 REPO_NAME="$(basename "$REPO_ROOT")"
 
@@ -32,8 +56,12 @@ echo "  1. Close the cmux workspace '$WORKSPACE_NAME'"
 echo "  2. Remove the worktree at $WORKTREE_PATH"
 echo "  3. Optionally delete the local branch '$BRANCH'"
 echo ""
-read -r -p "Continue? [y/N] " CONFIRM
-[[ "$CONFIRM" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+if [[ "$ASSUME_YES" -eq 1 ]]; then
+  echo "Auto-confirm enabled. Continuing without prompts."
+else
+  read -r -p "Continue? [y/N] " CONFIRM
+  [[ "$CONFIRM" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+fi
 
 # ── Close the cmux workspace ──────────────────────────────────────────────
 if ! command -v cmux &>/dev/null; then
@@ -65,7 +93,13 @@ git -C "$REPO_ROOT" worktree prune
 
 # ── Optionally delete the local branch ───────────────────────────────────
 echo ""
-read -r -p "Also delete local branch '$BRANCH'? [y/N] " DELETE_BRANCH
+DELETE_BRANCH="n"
+if [[ "$ASSUME_YES" -eq 1 ]]; then
+  DELETE_BRANCH="y"
+else
+  read -r -p "Also delete local branch '$BRANCH'? [y/N] " DELETE_BRANCH
+fi
+
 if [[ "$DELETE_BRANCH" =~ ^[Yy]$ ]]; then
   if git -C "$REPO_ROOT" show-ref --verify --quiet "refs/heads/$BRANCH"; then
     git -C "$REPO_ROOT" branch -d "$BRANCH" 2>/dev/null \

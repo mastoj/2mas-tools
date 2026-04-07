@@ -19,7 +19,7 @@ print_help() {
   cat <<'EOF'
 Usage:
   cgw <branch> [base-branch] [repo-root]
-  cgw delete <branch> [repo-root]
+  cgw delete [--yes|-y] <branch> [repo-root]
   cgw list [repo-root]
   cgw --help
 

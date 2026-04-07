@@ -120,6 +120,12 @@ if [[ -f "$REPO_CONFIG_FILE" && ! -f "$CONFIG_FILE" ]]; then
   echo "Copied workspace config to $CONFIG_FILE"
 fi
 
+if [[ -f "$CONFIG_FILE" ]]; then
+  echo "Using workspace config: $CONFIG_FILE"
+else
+  echo "No workspace config found. Using defaults. Checked: $CONFIG_FILE"
+fi
+
 AGENT_COMMAND="$(config_command agent "$DEFAULT_AGENT_COMMAND")"
 GIT_VIEW_COMMAND="$(config_command gitView "$DEFAULT_GIT_VIEW_COMMAND")"
 EDITOR_COMMAND="$(config_command editor "$DEFAULT_EDITOR_COMMAND")"
@@ -157,11 +163,6 @@ TERMINAL_ID=${TERMINAL_ID#OK }
 TERMINAL_ID=${TERMINAL_ID%% *}
 sleep 0.3
 
-# Run .cgw/config.json init command if configured
-if [[ -f "$CONFIG_FILE" ]]; then
-  echo "Loaded workspace config from $CONFIG_FILE"
-fi
-
 if [[ -n "$INIT_COMMAND" ]]; then
   echo "Running workspace init command..."
   run_surface_command "$TERMINAL_ID" "$INIT_COMMAND"
@@ -172,4 +173,4 @@ cmux select-workspace --workspace "$WORKSPACE_ID"
 
 echo ""
 echo "✓ Workspace '$WORKSPACE_NAME' open at $WORKTREE_PATH"
-echo "  To tear everything down: cgw delete $BRANCH $REPO_ROOT"
+echo "  To tear everything down: cgw delete --yes $BRANCH $REPO_ROOT"
