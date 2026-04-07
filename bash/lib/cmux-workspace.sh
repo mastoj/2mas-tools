@@ -26,6 +26,7 @@ branch_to_worktree_dir() {
 WORKTREE_DIR_NAME="$(branch_to_worktree_dir "$BRANCH")"
 WORKSPACE_NAME="$REPO_NAME - $BRANCH"
 WORKTREE_PATH="${REPO_ROOT}/.worktrees/${WORKTREE_DIR_NAME}"
+REPO_CONFIG_FILE="$REPO_ROOT/.cgw/config.json"
 CONFIG_FILE="$WORKTREE_PATH/.cgw/config.json"
 
 DEFAULT_INIT_COMMAND=""
@@ -112,6 +113,12 @@ else
 fi
 
 echo "Worktree ready."
+
+if [[ -f "$REPO_CONFIG_FILE" && ! -f "$CONFIG_FILE" ]]; then
+  mkdir -p "$(dirname "$CONFIG_FILE")"
+  cp "$REPO_CONFIG_FILE" "$CONFIG_FILE"
+  echo "Copied workspace config to $CONFIG_FILE"
+fi
 
 AGENT_COMMAND="$(config_command agent "$DEFAULT_AGENT_COMMAND")"
 GIT_VIEW_COMMAND="$(config_command gitView "$DEFAULT_GIT_VIEW_COMMAND")"
