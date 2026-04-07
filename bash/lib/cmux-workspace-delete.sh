@@ -38,28 +38,12 @@ read -r -p "Continue? [y/N] " CONFIRM
 # ── Close the cmux workspace ──────────────────────────────────────────────
 if command -v cmux &>/dev/null; then
   WORKSPACE_ID=$(cmux --json list-workspaces 2>/dev/null \
-    | WORKSPACE_NAME="$WORKSPACE_NAME" WORKTREE_PATH="$WORKTREE_PATH" python3 -c '
-import json
-import os
-import sys
-
-payload = json.load(sys.stdin)
-workspace_name = os.environ["WORKSPACE_NAME"]
-worktree_path = os.environ["WORKTREE_PATH"]
-workspaces = payload.get('workspaces', [])
-match = next(
-  (
-    w for w in workspaces
-    if w.get("title") == workspace_name or w.get("current_directory") == worktree_path
-  ),
-  None,
-)
-print(match["ref"] if match else "")
-' 2>/dev/null || true)
+    | jq -r --arg workspace_name "$WORKSPACE_NAME" 'first(.workspaces[]? | select(.title == $workspace_name) | .ref) // empty' \
+      2>/dev/null || true)
 
   if [[ -n "$WORKSPACE_ID" ]]; then
     cmux close-workspace --workspace "$WORKSPACE_ID"
-    echo "✓ Closed cmux workspace '$WORKSPACE_NAME'"
+    echo "✓ Closed cmux workspace '$WORKSPACE_NAME' '$WORKSPACE_ID'"
   else
     echo "  (no open cmux workspace named '$WORKSPACE_NAME' — skipping)"
   fi
