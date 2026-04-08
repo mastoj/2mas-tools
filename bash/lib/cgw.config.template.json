@@ -4,5 +4,6 @@
     "gitView": "lazygit",
     "editor": "hx .",
     "agent": "opencode ."
-  }
+  },
+  "workspace": null
 }

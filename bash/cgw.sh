@@ -32,6 +32,7 @@ Commands:
 Notes:
   cgw reads .cgw/config.json from the repo root when present.
   Supported commands are init, gitView, editor, and agent.
+  A .workspace object overrides the default layout with a split tree.
   Defaults: init="", gitView="lazygit", editor="hx .", agent="opencode ."
 EOF
 }
