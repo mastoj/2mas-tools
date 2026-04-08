@@ -13,6 +13,7 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 CREATE_SCRIPT="$SCRIPT_DIR/lib/cmux-workspace.sh"
 DELETE_SCRIPT="$SCRIPT_DIR/lib/cmux-workspace-delete.sh"
+DELETE_ALL_SCRIPT="$SCRIPT_DIR/lib/cgw-workspace-delete-all.sh"
 LIST_SCRIPT="$SCRIPT_DIR/lib/cgw-workspace-list.sh"
 
 print_help() {
@@ -20,12 +21,14 @@ print_help() {
 Usage:
   cgw <branch> [base-branch] [repo-root]
   cgw delete [--yes|-y] <branch> [repo-root]
+  cgw delete-all [--yes|-y] [repo-root]
   cgw list [--interactive|-i] [repo-root]
   cgw --help
 
 Commands:
   <none>    Create a cmux workspace and git worktree
   delete    Delete a cmux workspace and git worktree
+  delete-all Delete all cgw worktrees for a repo
   list      List cgw worktrees for a repo, optionally interactively
   --help    Show this help menu
 
@@ -44,6 +47,10 @@ case "${1:-}" in
   delete)
     shift
     exec bash "$DELETE_SCRIPT" "$@"
+    ;;
+  delete-all)
+    shift
+    exec bash "$DELETE_ALL_SCRIPT" "$@"
     ;;
   list)
     shift
