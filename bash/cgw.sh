@@ -20,13 +20,13 @@ print_help() {
 Usage:
   cgw <branch> [base-branch] [repo-root]
   cgw delete [--yes|-y] <branch> [repo-root]
-  cgw list [repo-root]
+  cgw list [--interactive|-i] [repo-root]
   cgw --help
 
 Commands:
   <none>    Create a cmux workspace and git worktree
   delete    Delete a cmux workspace and git worktree
-  list      List cgw worktrees for a repo
+  list      List cgw worktrees for a repo, optionally interactively
   --help    Show this help menu
 
 Notes:
