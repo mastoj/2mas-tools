@@ -34,16 +34,58 @@ BRANCH="${1:?Usage: cgw delete [--yes|-y] <branch> [repo-root]}"
 REPO_ROOT="${2:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
 REPO_NAME="$(basename "$REPO_ROOT")"
 
-branch_to_worktree_dir() {
+default_worktree_dir_for_branch() {
   local branch="$1"
   branch="${branch#refs/heads/}"
   branch="${branch//\//--}"
   printf '%s\n' "$branch"
 }
 
-WORKTREE_DIR_NAME="$(branch_to_worktree_dir "$BRANCH")"
+resolve_worktree_path_for_branch() {
+  local branch="$1"
+  local worktrees_dir="$2"
+  local current_path=""
+  local current_branch=""
+  local branch_ref="refs/heads/${branch#refs/heads/}"
+  local line
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    case "$line" in
+      worktree\ *)
+        if [[ "$current_branch" == "$branch_ref" && "$current_path" == "$worktrees_dir"/* ]]; then
+          printf '%s\n' "$current_path"
+          return 0
+        fi
+        current_path="${line#worktree }"
+        current_branch=""
+        ;;
+      branch\ *)
+        current_branch="${line#branch }"
+        ;;
+      '')
+        if [[ "$current_branch" == "$branch_ref" && "$current_path" == "$worktrees_dir"/* ]]; then
+          printf '%s\n' "$current_path"
+          return 0
+        fi
+        current_path=""
+        current_branch=""
+        ;;
+    esac
+  done < <(git -C "$REPO_ROOT" worktree list --porcelain)
+
+  if [[ "$current_branch" == "$branch_ref" && "$current_path" == "$worktrees_dir"/* ]]; then
+    printf '%s\n' "$current_path"
+    return 0
+  fi
+
+  return 1
+}
+
+WORKTREES_DIR="${REPO_ROOT}/.worktrees"
+WORKTREE_DIR_NAME="$(default_worktree_dir_for_branch "$BRANCH")"
 WORKSPACE_NAME="$REPO_NAME - $BRANCH"
-WORKTREE_PATH="${REPO_ROOT}/.worktrees/${WORKTREE_DIR_NAME}"
+WORKTREE_PATH="$(resolve_worktree_path_for_branch "$BRANCH" "$WORKTREES_DIR" || true)"
+FALLBACK_WORKTREE_PATH="${WORKTREES_DIR}/${WORKTREE_DIR_NAME}"
 
 if ! git -C "$REPO_ROOT" rev-parse --git-dir &>/dev/null; then
   echo "Not a git repository: $REPO_ROOT"
@@ -53,7 +95,11 @@ fi
 # ── Confirm ───────────────────────────────────────────────────────────────
 echo "This will:"
 echo "  1. Close the cmux workspace '$WORKSPACE_NAME'"
-echo "  2. Remove the worktree at $WORKTREE_PATH"
+if [[ -n "$WORKTREE_PATH" ]]; then
+  echo "  2. Remove the worktree at $WORKTREE_PATH"
+else
+  echo "  2. Remove the cgw worktree for branch '$BRANCH' if present under $WORKTREES_DIR"
+fi
 echo "  3. Optionally delete the local branch '$BRANCH'"
 echo ""
 if [[ "$ASSUME_YES" -eq 1 ]]; then
@@ -82,11 +128,11 @@ else
 fi
 
 # ── Remove the worktree ───────────────────────────────────────────────────
-if git -C "$REPO_ROOT" worktree list --porcelain | grep -Fxq "worktree $WORKTREE_PATH"; then
+if [[ -n "$WORKTREE_PATH" ]]; then
   git -C "$REPO_ROOT" worktree remove --force "$WORKTREE_PATH"
   echo "✓ Removed worktree at $WORKTREE_PATH"
 else
-  echo "  (worktree not found at $WORKTREE_PATH — may already be removed)"
+  echo "  (no cgw worktree found for '$BRANCH' under $WORKTREES_DIR; expected path was often $FALLBACK_WORKTREE_PATH)"
 fi
 
 git -C "$REPO_ROOT" worktree prune

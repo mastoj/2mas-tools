@@ -16,14 +16,14 @@ BASE_BRANCH="${2:-HEAD}"
 REPO_ROOT="${3:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
 REPO_NAME="$(basename "$REPO_ROOT")"
 
-branch_to_worktree_dir() {
+default_worktree_dir_for_branch() {
   local branch="$1"
   branch="${branch#refs/heads/}"
   branch="${branch//\//--}"
   printf '%s\n' "$branch"
 }
 
-WORKTREE_DIR_NAME="$(branch_to_worktree_dir "$BRANCH")"
+WORKTREE_DIR_NAME="$(default_worktree_dir_for_branch "$BRANCH")"
 WORKSPACE_NAME="$REPO_NAME - $BRANCH"
 WORKTREE_PATH="${REPO_ROOT}/.worktrees/${WORKTREE_DIR_NAME}"
 REPO_CONFIG_FILE="$REPO_ROOT/.cgw/config.json"

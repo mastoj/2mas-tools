@@ -51,13 +51,6 @@ current_branch=""
 found_any=0
 worktree_lines=()
 
-branch_to_worktree_dir() {
-  local branch="$1"
-  branch="${branch#refs/heads/}"
-  branch="${branch//\//--}"
-  printf '%s\n' "$branch"
-}
-
 print_worktree() {
   local worktree_path="$1"
   local branch_ref="$2"
