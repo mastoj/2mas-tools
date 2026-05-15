@@ -57,6 +57,8 @@ What it does:
 4. Opens a `cmux` workspace rooted at that worktree.
 5. Builds either the default layout or a custom layout from config.
 
+When run from inside an existing linked worktree, `cgw` still uses the shared repo root for `.worktrees/`.
+
 Branch names containing `/` are stored under `.worktrees/` with `/` replaced by `--`.
 
 Example:

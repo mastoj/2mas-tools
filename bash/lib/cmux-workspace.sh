@@ -11,9 +11,26 @@
 
 set -euo pipefail
 
+resolve_repo_root() {
+  local path="${1:-$PWD}"
+  local git_common_dir
+
+  if ! git_common_dir="$(git -C "$path" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
+    printf '%s\n' "$path"
+    return 0
+  fi
+
+  if [[ "$(basename "$git_common_dir")" == ".git" ]]; then
+    dirname "$git_common_dir"
+    return 0
+  fi
+
+  printf '%s\n' "$path"
+}
+
 BRANCH="${1:?Usage: cgw <branch> [base-branch] [repo-root]}"
 BASE_BRANCH="${2:-HEAD}"
-REPO_ROOT="${3:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
+REPO_ROOT="$(resolve_repo_root "${3:-$PWD}")"
 REPO_NAME="$(basename "$REPO_ROOT")"
 
 default_worktree_dir_for_branch() {

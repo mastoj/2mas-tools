@@ -30,7 +30,24 @@ EOF
   esac
 done
 
-REPO_ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")}"
+resolve_repo_root() {
+  local path="${1:-$PWD}"
+  local git_common_dir
+
+  if ! git_common_dir="$(git -C "$path" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
+    printf '%s\n' "$path"
+    return 0
+  fi
+
+  if [[ "$(basename "$git_common_dir")" == ".git" ]]; then
+    dirname "$git_common_dir"
+    return 0
+  fi
+
+  printf '%s\n' "$path"
+}
+
+REPO_ROOT="$(resolve_repo_root "${1:-$PWD}")"
 WORKTREES_DIR="${REPO_ROOT}/.worktrees"
 DELETE_SCRIPT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)/cmux-workspace-delete.sh"
 
